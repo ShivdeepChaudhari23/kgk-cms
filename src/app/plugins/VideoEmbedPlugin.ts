@@ -1,8 +1,6 @@
-// plugins/VideoEmbedPlugin.ts
 import Quill from "quill";
-import { Plugin } from "./PluginManager";
+import { Plugin } from "../types/Plugins";
 
-// Explicitly cast BlockEmbed to avoid TypeScript issues
 const BlockEmbed = Quill.import("blots/block/embed") as any;
 
 class VideoEmbedBlot extends BlockEmbed {
@@ -31,7 +29,7 @@ const VideoEmbedPlugin: Plugin = {
   id: "videoEmbed",
   name: "Video Embed",
   install: (editor: any) => {
-    if (typeof window === "undefined") return; // Ensure client-side only
+    if (typeof window === "undefined") return;
 
     // Add a toolbar button handler for video embeds
     const toolbar = editor.getModule("toolbar");
@@ -47,7 +45,7 @@ const VideoEmbedPlugin: Plugin = {
     const doesButtonExist = !!document.getElementsByClassName('embed-video-button')[0];
     if (!doesButtonExist) {
         const videoButton = document.createElement("button");
-        videoButton.className = 'ql-blockquote bg-blue-300 embed-video-button';
+        videoButton.className = 'ql-blockquote embed-video-button';
         videoButton.innerHTML = "Embed";
         videoButton.onclick = () => {
         const videoUrl = prompt("Please enter video URL");
