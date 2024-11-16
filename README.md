@@ -2,6 +2,14 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+1. Install the repository.
+
+2. Setup environment variables in .env file at the root level as follows:
+```NEXT_PUBLIC_API_URL="http://localhost:{BACKEND_SERVER_PORT_NUMBER}/content"```
+
+3. Install dependencies:
+```npm install```
+
 First, run the development server:
 
 ```bash
@@ -16,21 +24,22 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Creating New Plugin
+```
+export interface Plugin {
+  id: string;
+  name: string;
+  install: (editor: any) => void;
+}
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Register the custom blot using Quill.register(CustomBlot);
 
-## Learn More
+- In the install function, add logic to append plugin action button in toolbar of the editor.
 
-To learn more about Next.js, take a look at the following resources:
+- Add the callback for handling the click action on the toolbar button of plugin.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Run the project again.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Refer to a sample embedded video plugin in `VideoEmbedPlugin.ts` to create a new plugin with following schema.
+  
