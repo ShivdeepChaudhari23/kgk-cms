@@ -9,6 +9,7 @@ import { PostConfiguration } from "app/types/Post";
 
 
 import 'react-quill-new/dist/quill.snow.css';
+import { ALLOWED_TAGS } from "app/utils/constants";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3009/content";
 
@@ -24,7 +25,7 @@ const Shivdeep = () => {
                     if (response.status === 200 && response.data.data) {
                         setPost(response.data.data);
                         const postContent = DOMPurify.sanitize(response.data.data.content, {
-                            FORBID_TAGS: ['script']
+                            ALLOWED_TAGS: ALLOWED_TAGS,
                         });
                         const container = document.getElementById('post-container') as HTMLElement;
                         container.innerHTML = postContent;

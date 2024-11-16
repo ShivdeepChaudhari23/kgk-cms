@@ -1,5 +1,6 @@
 import Quill from "quill";
 import { Plugin } from "../types/Plugins";
+import { messages } from "app/utils/constants";
 
 const BlockEmbed = Quill.import("blots/block/embed") as any;
 
@@ -46,9 +47,9 @@ const VideoEmbedPlugin: Plugin = {
     if (!doesButtonExist) {
         const videoButton = document.createElement("button");
         videoButton.className = 'ql-blockquote embed-video-button';
-        videoButton.innerHTML = "Embed";
+        videoButton.innerHTML = messages.embedButton;
         videoButton.onclick = () => {
-        const videoUrl = prompt("Please enter video URL");
+        const videoUrl = prompt(messages.videoUrl);
         if (videoUrl) {
             const range = editor.getSelection();
             const videoId = videoUrl.split("v=")[1];

@@ -12,6 +12,7 @@ import PostTile from "./components/PostTile";
 import { Post, PostConfiguration, postDefaultConfig } from "./types/Post";
 
 import 'react-quill-new/dist/quill.snow.css';
+import { messages } from './utils/constants';
 
 pluginManager.register(VideoEmbedPlugin);
 
@@ -34,7 +35,7 @@ export default function Home() {
     (async function () {
       try {
         const response = await axios.get(`${API_URL}`) as AxiosResponse;
-        if (response.status === 200 && response.data.data.length > 0) {
+        if (response.status === 200 && response.data.data && response.data.data.length > 0) {
           setPostsList(response.data.data);
         } else {
           setPostsList([]);
@@ -87,8 +88,10 @@ export default function Home() {
   
   const refetchPosts = async () => {
     const posts = await axios.get(`${API_URL}`) as AxiosResponse;
-        if (posts.data.data.length > 0) {
+        if (posts.data.data && posts.data.data.length > 0) {
            setPostsList(posts.data.data);
+        } else {
+          setPostsList([]);
         }
   }
 
@@ -155,7 +158,7 @@ export default function Home() {
 
   return (
     <Fragment>
-      <h1 className="text-center my-4 text-[24px] md:text-[36px] font-bold">KGK Content Management System</h1>
+      <h1 className="text-center my-4 text-[24px] md:text-[36px] font-bold">{messages.title}</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 justify-items-center h-[80vh] p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <div>
         <div>
@@ -188,18 +191,18 @@ export default function Home() {
             onClick={handleSave}
             disabled={shouldDisableButton}
           >
-            <span className="px-2 font-medium">{postData.id>0 ? 'Update' : 'Create'}</span>
+            <span className="px-2 font-medium">{messages.button(postData.id>0)}</span>
           </button>
           <button
             className="border-[1px] border-black rounded-md mt-4 bg-gray-50"
             onClick={resetData}
           >
-            <span className="px-2 font-medium">Reset</span>
+            <span className="px-2 font-medium">{messages.reset}</span>
           </button>
         </div>
       </div>
       <div className="w-full">
-        <h3 className="text-center mt-4 text-[16px] font-bold">Featured Post</h3>
+        <h3 className="text-center mt-4 text-[16px] font-bold">{messages.featuredPosts}</h3>
         <div>
           {postsList.length > 0 ? (
             postsList.map((item) => {
@@ -213,7 +216,7 @@ export default function Home() {
                 />
               );
           })): (
-            <h3 className='font-bold text-center mt-4'>No Posts Available.</h3>
+            <h3 className='font-bold text-center mt-4'>{messages.noPosts}</h3>
           )}
         </div>
       </div>
