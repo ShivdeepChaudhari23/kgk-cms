@@ -1,101 +1,223 @@
-import Image from "next/image";
+"use client"
+
+import { useRouter } from 'next/navigation';
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import slugify from "slugify";
+import axios, { AxiosResponse } from "axios";
+import ReactQuill from "react-quill-new";
+
+import { pluginManager } from "./plugins/PluginManager";
+import VideoEmbedPlugin from "./plugins/VideoEmbedPlugin";
+import PostTile from "./components/PostTile";
+import { Post, PostConfiguration, postDefaultConfig } from "./types/Post";
+
+import 'react-quill-new/dist/quill.snow.css';
+
+pluginManager.register(VideoEmbedPlugin);
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3009/content";
+
+export const pluginButton = <span className="ql-format"><button className="ql-blockquote" id="video-embed">Video</button></span>;
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const router = useRouter();
+  let quillRef = useRef<ReactQuill | null>(null);
+  const [postsList, setPostsList] = useState<Post[]>([]);
+  const [selectedPostData, setSelectedPostData] = useState<PostConfiguration>(postDefaultConfig);
+  const [postData, setPostData] = useState<PostConfiguration>(postDefaultConfig);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const redirectToPost = (slug: string) => {
+    router.push(`/post/${slug}`);
+  }
+
+  useEffect(() => {
+    (async function () {
+      try {
+        const response = await axios.get(`${API_URL}`) as AxiosResponse;
+        if (response.status === 200 && response.data.data.length > 0) {
+          setPostsList(response.data.data);
+        } else {
+          setPostsList([]);
+        }
+      } catch (e) {
+        console.log("#### ERROR FETCHING LIST : %o", e)
+      }
+    }());
+    if (quillRef.current) {
+      const editor = quillRef.current.getEditor();
+      pluginManager.applyPlugins(editor);
+    }
+  }, []);
+
+  const shouldDisableButton = useMemo(() => {
+    const { slug: currentSlug, content: currentContent, title: currentTitle } = postData;
+    if (!(currentSlug && currentContent && currentTitle)) return true;
+    const { slug: originalSlug, content: originalContent, title: originalTitle } = selectedPostData;
+    const isSlugChanged = currentSlug !== originalSlug;
+    const isTitleChanged = currentTitle !== originalTitle;
+    const isContentChanged = currentContent !== originalContent;
+    return postData.id > 0 && !(isSlugChanged || isTitleChanged || isContentChanged);
+  }, [postData]);
+
+
+  const modules = {
+    toolbar: [
+      [{ header: '1' }, { header: '2' }, { font: [] }],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      [{ script: 'sub' }, { script: 'super' }],
+      [{ align: [] }],
+      ['bold', 'italic', 'underline'],
+      ['link', 'image'],
+      ['blockquote', 'code-block'],
+    ],
+  };
+
+  const handleDataChange = (value: string, key: string) => {
+    setPostData((prev) => {
+      let payload = prev;
+      // Auto Generate slug based on title
+      if (key === 'title') {
+        const slugByTitle = slugify(value, { lower: true });
+        payload = { ...payload, slug: slugByTitle };
+      }
+      payload = { ...payload, [key]: value };
+      return payload;
+    });
+  }
+  
+  const refetchPosts = async () => {
+    const posts = await axios.get(`${API_URL}`) as AxiosResponse;
+        if (posts.data.data.length > 0) {
+           setPostsList(posts.data.data);
+        }
+  }
+
+  const resetData = () => {
+    setPostData(postDefaultConfig);
+    setSelectedPostData(postDefaultConfig);
+  }
+
+  const handleSave = async () => {
+    // Gather All Post data
+    const { title, slug, content, id } = postData
+    const isEditing = id > 0;
+    if (isEditing) {
+      const payload = {
+        ...(selectedPostData.content !== content ? { content } : {}),
+        ...(selectedPostData.title !== title ? { title } : {}),
+        ...(selectedPostData.slug !== slug ? { slug } : {}),
+      };
+      try {
+        const response = await axios.put(`${API_URL}/${id}`, payload);
+        if (response.status === 200) {
+          refetchPosts();
+        }
+      } catch (e) {
+        console.error('#### OPERATIONS FAILED : %o', e);
+      }
+    } else {
+      const payload = {
+        title,
+        slug,
+        content,
+      };
+  
+      // Call API that uploads data in Database and creates the post
+      
+      try {
+        const response = await axios.post(API_URL, payload);
+        if (response.status === 201 && response.data.data.id) {
+          refetchPosts();
+        }
+      } catch (e) {
+        console.error('#### OPERATIONS FAILED : %o', e);
+      }
+    }
+    resetData()
+  };
+
+  const handleClickDelete = async (id: number) => {
+    try {
+      const response = await axios.delete(`${API_URL}/${id}`);
+      if (response.status === 200 && response.data.message) {
+        refetchPosts();
+      }
+    } catch (e) {
+      console.error('#### DELETE FAILED : %o', e);
+    }
+  }
+
+  const handleEditClick = (data: Post) => {
+    const { id, slug, title, content } = data;
+    setSelectedPostData({ id, title, slug, content });
+    setPostData({ id, title, slug, content });
+  }
+
+  return (
+    <Fragment>
+      <h1 className="text-center my-4 text-[24px] md:text-[36px] font-bold">KGK Content Management System</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 justify-items-center h-[80vh] p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      <div>
+        <div>
+          <label className="mr-4">Title</label>
+          <input
+            value={postData.title}
+            onChange={(e) => handleDataChange(e.target.value, 'title')}
+            placeholder="Title"
+            className="h-70"
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        <div>
+          <label className="mr-4">Slug</label>
+          <input
+            value={postData.slug}
+            onChange={(e) => handleDataChange(e.target.value, 'slug')}
+            placeholder="Slug"
+            className=""
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+        <ReactQuill
+          ref={quillRef}
+          modules={modules}
+          value={postData.content}
+          onChange={(value) => handleDataChange(value, 'content')}
+        />
+        <div className='flex justify-between'>
+          <button
+            className=" bg-blue-400 border-[1px] border-black rounded-md mt-4 disabled:bg-gray-50 disabled:cursor-not-allowed"
+            onClick={handleSave}
+            disabled={shouldDisableButton}
+          >
+            <span className="px-2 font-medium">{postData.id>0 ? 'Update' : 'Create'}</span>
+          </button>
+          <button
+            className="border-[1px] border-black rounded-md mt-4 bg-gray-50"
+            onClick={resetData}
+          >
+            <span className="px-2 font-medium">Reset</span>
+          </button>
+        </div>
+      </div>
+      <div className="w-full">
+        <h3 className="text-center mt-4 text-[16px] font-bold">Featured Post</h3>
+        <div>
+          {postsList.length > 0 ? (
+            postsList.map((item) => {
+              return (
+                <PostTile
+                  key={`key-for-post-${item.id}`}
+                  post={item}
+                  redirectToPost={redirectToPost}
+                  handleClickDelete={handleClickDelete}
+                  handleEditClick={handleEditClick}
+                />
+              );
+          })): (
+            <h3 className='font-bold text-center mt-4'>No Posts Available.</h3>
+          )}
+        </div>
+      </div>
     </div>
+    </Fragment>
   );
 }
